@@ -44,9 +44,11 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME || 'unilia_ecommerce',
   waitForConnections: true,
   connectionLimit: 10,
-  decimalNumbers: true
+  decimalNumbers: true,
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
-
 // ===============================
 // UPLOADS
 // ===============================
