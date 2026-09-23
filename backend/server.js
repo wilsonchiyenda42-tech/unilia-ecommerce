@@ -31,8 +31,14 @@ const JWT_SECRET =
 // DATABASE
 // ===============================
 
+console.log("DB HOST:", process.env.DB_HOST);
+console.log("DB PORT:", process.env.DB_PORT);
+console.log("DB NAME:", process.env.DB_NAME);
+console.log("DB USER:", process.env.DB_USER); 
+
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
+  port: Number(process.env.DB_PORT || 3306),
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'unilia_ecommerce',
