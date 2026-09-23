@@ -21,6 +21,7 @@ import {
 
 import './styles.css';
 
+
 const API =
   import.meta.env.VITE_API_URL ||
   'http://localhost:5000';
@@ -28,6 +29,21 @@ const API =
 const WS =
   import.meta.env.VITE_WS_URL ||
   'ws://localhost:8085';
+
+  function getImageUrl(imageUrl) {
+  if (!imageUrl) {
+    return '';
+  }
+
+  if (
+    imageUrl.startsWith('http://') ||
+    imageUrl.startsWith('https://')
+  ) {
+    return imageUrl;
+  }
+
+  return `${API}${imageUrl}`;
+}
 
 // ========================================
 // AUTH CONTEXT
@@ -481,8 +497,8 @@ function ProductCard({
     <article className="card">
       <div className="image-wrap">
         <img
-          src={`${API}${item.image_url}`}
-          alt={item.name}
+          src={getImageUrl(item.image_url)}
+        alt={item.name}
         />
 
         <span
@@ -2167,7 +2183,7 @@ function Dashboard() {
                 <div className="dashboard-product-image">
                   {item.image_url ? (
                     <img
-                      src={`${API}${item.image_url}`}
+                      src={getImageUrl(item.image_url)}
                       alt={item.name}
                     />
                   ) : (

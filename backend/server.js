@@ -9,9 +9,21 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { WebSocketServer } from 'ws';
+import { v2 as cloudinary } from 'cloudinary';
 
 // Load environment variables
 dotenv.config();
+
+cloudinary.config({
+  cloud_name:
+    process.env.CLOUDINARY_CLOUD_NAME,
+
+  api_key:
+    process.env.CLOUDINARY_API_KEY,
+
+  api_secret:
+    process.env.CLOUDINARY_API_SECRET
+});
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -52,33 +64,12 @@ const pool = mysql.createPool({
 // ===============================
 // UPLOADS
 // ===============================
-
-const uploadsDir = path.join(
-  __dirname,
-  'uploads'
-);
-
-fs.mkdirSync(uploadsDir, {
-  recursive: true
-});
+// ===============================
+// CLOUDINARY IMAGE UPLOADS
+// ===============================
 
 const upload = multer({
-  storage: multer.diskStorage({
-    destination: uploadsDir,
-
-    filename: (_req, file, cb) => {
-      const safe =
-        file.originalname.replace(
-          /[^a-zA-Z0-9._-]/g,
-          '_'
-        );
-
-      cb(
-        null,
-        `${Date.now()}-${safe}`
-      );
-    }
-  }),
+  storage: multer.memoryStorage(),
 
   limits: {
     fileSize: 5 * 1024 * 1024
@@ -96,6 +87,37 @@ const upload = multer({
   }
 });
 
+function uploadImageToCloudinary(file) {
+  return new Promise(
+    (resolve, reject) => {
+      const stream =
+        cloudinary.uploader.upload_stream(
+          {
+            folder:
+              'unilia-ecommerce',
+
+            resource_type:
+              'image'
+          },
+
+          (error, result) => {
+            if (error) {
+              reject(error);
+              return;
+            }
+
+            resolve(
+              result.secure_url
+            );
+          }
+        );
+
+      stream.end(
+        file.buffer
+      );
+    }
+  );
+}
 // ===============================
 // MIDDLEWARE
 // ===============================
@@ -108,10 +130,6 @@ app.use(
 
 app.use(express.json());
 
-app.use(
-  '/uploads',
-  express.static(uploadsDir)
-);
 
 // ===============================
 // RESPONSE HELPERS
@@ -656,8 +674,9 @@ app.post(
       }
 
       const imageUrl =
-        `/uploads/${req.file.filename}`;
-
+  await uploadImageToCloudinary(
+    req.file
+  );
       const [
         result
       ] =
@@ -841,14 +860,14 @@ app.patch(
       }
 
       let imageUrl =
-        existing.image_url;
+  existing.image_url;
 
-      // Replace image only if a new one was uploaded
-      if (req.file) {
-        imageUrl =
-          `/uploads/${req.file.filename}`;
-      }
-
+if (req.file) {
+  imageUrl =
+    await uploadImageToCloudinary(
+      req.file
+    );
+}
       await pool.execute(
         `UPDATE listings
          SET
