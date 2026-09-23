@@ -1650,3 +1650,272 @@ footer {
     width: 100%;
   }
 }
+
+/* ========================================
+   EDIT PRODUCT PANEL
+======================================== */
+
+.edit-product-panel {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  padding: 24px;
+  margin: 24px 0;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.edit-product-panel h2 {
+  margin: 0 0 20px;
+  font-size: 24px;
+}
+
+/* FORM GRID */
+
+.edit-product-panel .form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.edit-product-panel label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 18px;
+}
+
+.edit-product-panel input,
+.edit-product-panel textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #d8dce3;
+  border-radius: 10px;
+  background: #fff;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.edit-product-panel input:focus,
+.edit-product-panel textarea:focus {
+  border-color: #111;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.06);
+}
+
+.edit-product-panel textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+/* BUTTON AREA */
+
+.edit-product-panel .dashboard-product-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+/* MOBILE */
+
+@media (max-width: 700px) {
+  .edit-product-panel {
+    padding: 18px;
+    border-radius: 14px;
+  }
+
+  .edit-product-panel .form-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .edit-product-panel .dashboard-product-actions {
+    flex-direction: column;
+  }
+
+  .edit-product-panel .dashboard-product-actions button {
+    width: 100%;
+  }
+}
+
+/* ========================================
+   UNILIA NAVY THEME
+======================================== */
+
+:root {
+  --navy: #0b1f3a;
+  --navy-light: #12345b;
+  --navy-hover: #174574;
+  --white: #ffffff;
+  --page-bg: #f3f6fa;
+  --border: #dbe2ea;
+  --text: #172033;
+  --muted: #64748b;
+}
+
+/* PAGE */
+
+body {
+  margin: 0;
+  background: var(--page-bg);
+  color: var(--text);
+}
+
+/* HEADER */
+
+header {
+  background: var(--navy);
+  color: white;
+  border-bottom: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* BRAND */
+
+.brand {
+  color: white;
+}
+
+.brand:hover {
+  color: white;
+}
+
+.brand-logo {
+  width: 42px;
+  height: 42px;
+  object-fit: cover;
+  border-radius: 10px;
+  display: block;
+}
+
+/* NAVIGATION */
+
+header a {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+header a:hover {
+  color: white;
+}
+
+/* MAIN CONTENT */
+
+main,
+.dashboard,
+.marketplace,
+section {
+  background: transparent;
+}
+
+/* DASHBOARD */
+
+.dashboard-header {
+  background: var(--navy);
+  color: white;
+  border-radius: 20px;
+  padding: 28px;
+  margin-bottom: 24px;
+  box-shadow: 0 10px 30px rgba(11, 31, 58, 0.18);
+}
+
+.dashboard-header p {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+/* PRODUCT CARDS */
+
+.dashboard-product,
+.product-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 6px 20px rgba(11, 31, 58, 0.07);
+}
+
+/* BUTTONS */
+
+.primary {
+  background: var(--navy);
+  color: white;
+  border: 1px solid var(--navy);
+}
+
+.primary:hover {
+  background: var(--navy-hover);
+  border-color: var(--navy-hover);
+}
+
+.secondary {
+  background: white;
+  color: var(--navy);
+  border: 1px solid var(--border);
+}
+
+.secondary:hover {
+  background: #eef3f8;
+  border-color: var(--navy);
+}
+
+/* EDIT PANEL */
+
+.edit-product-panel {
+  background: white;
+  border: 1px solid var(--border);
+  border-top: 5px solid var(--navy);
+  border-radius: 18px;
+  padding: 28px;
+  margin: 24px 0;
+  box-shadow: 0 10px 28px rgba(11, 31, 58, 0.10);
+}
+
+.edit-product-panel h2 {
+  color: var(--navy);
+  margin-top: 0;
+}
+
+/* FORM */
+
+.edit-product-panel input,
+.edit-product-panel textarea {
+  background: #f8fafc;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.edit-product-panel input:focus,
+.edit-product-panel textarea:focus {
+  border-color: var(--navy);
+  box-shadow: 0 0 0 3px rgba(11, 31, 58, 0.10);
+}
+
+/* STATUS */
+
+.status {
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* MOBILE */
+
+@media (max-width: 700px) {
+  .dashboard-header {
+    padding: 20px;
+    border-radius: 16px;
+  }
+
+  .edit-product-panel {
+    padding: 20px;
+    border-radius: 16px;
+  }
+
+  .brand-logo {
+    width: 36px;
+    height: 36px;
+  }
+}

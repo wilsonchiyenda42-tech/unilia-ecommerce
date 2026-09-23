@@ -729,8 +729,194 @@ app.post(
 );
 
 // ===============================
+// UPDATE LISTING — SELLER
+// ===============================
+
+app.patch(
+  '/api/listings/:id',
+  auth,
+  upload.single('image'),
+  async (req, res) => {
+    try {
+      const listingId =
+        Number(req.params.id);
+
+      const {
+        name,
+        price,
+        description,
+        location,
+        order_cost
+      } = req.body;
+
+      if (!Number.isInteger(listingId)) {
+        return fail(
+          res,
+          400,
+          'Invalid product ID.'
+        );
+      }
+
+      // Find the listing and verify ownership
+      const [
+        existingRows
+      ] = await pool.execute(
+        `SELECT *
+         FROM listings
+         WHERE id = ?`,
+        [listingId]
+      );
+
+      if (!existingRows.length) {
+        return fail(
+          res,
+          404,
+          'Good not found.'
+        );
+      }
+
+      const existing =
+        existingRows[0];
+
+      if (
+        existing.seller_id !==
+        req.user.id
+      ) {
+        return fail(
+          res,
+          403,
+          'You can only edit your own goods.'
+        );
+      }
+
+      if (
+        !name ||
+        !price ||
+        !description ||
+        !location
+      ) {
+        return fail(
+          res,
+          400,
+          'Name, cost, description and location are required.'
+        );
+      }
+
+      const numericPrice =
+        Number(price);
+
+      const numericOrder =
+        order_cost === '' ||
+        order_cost == null
+          ? null
+          : Number(order_cost);
+
+      if (
+        !Number.isFinite(
+          numericPrice
+        ) ||
+        numericPrice <= 0
+      ) {
+        return fail(
+          res,
+          400,
+          'Product cost must be a valid amount greater than zero.'
+        );
+      }
+
+      if (
+        numericOrder !== null &&
+        (
+          !Number.isFinite(
+            numericOrder
+          ) ||
+          numericOrder < 0
+        )
+      ) {
+        return fail(
+          res,
+          400,
+          'Order cost must be a valid non-negative amount.'
+        );
+      }
+
+      let imageUrl =
+        existing.image_url;
+
+      // Replace image only if a new one was uploaded
+      if (req.file) {
+        imageUrl =
+          `/uploads/${req.file.filename}`;
+      }
+
+      await pool.execute(
+        `UPDATE listings
+         SET
+           name = ?,
+           price = ?,
+           description = ?,
+           location = ?,
+           order_cost = ?,
+           image_url = ?
+         WHERE id = ?
+           AND seller_id = ?`,
+        [
+          name.trim(),
+          numericPrice,
+          description.trim(),
+          location.trim(),
+          numericOrder,
+          imageUrl,
+          listingId,
+          req.user.id
+        ]
+      );
+
+      const [
+        rows
+      ] = await pool.execute(
+        `SELECT
+          l.*,
+          u.name AS seller_name
+         FROM listings l
+         JOIN users u
+           ON u.id = l.seller_id
+         WHERE l.id = ?`,
+        [listingId]
+      );
+
+      broadcast({
+        type:
+          'LISTING_UPDATED',
+
+        listing:
+          rows[0]
+      });
+
+      ok(res, {
+        listing:
+          rows[0],
+
+        message:
+          'Good updated successfully.'
+      });
+
+    } catch (e) {
+      console.error(e);
+
+      fail(
+        res,
+        500,
+        'Could not update the good.'
+      );
+    }
+  }
+);
+
+// ===============================
 // BOOK LISTING
 // ===============================
+
 
 app.post(
   '/api/listings/:id/book',

@@ -151,9 +151,11 @@ function Logo() {
       className="brand"
       to="/"
     >
-      <span className="logo-mark">
-        U
-      </span>
+      <img
+        className="brand-logo"
+        src="https://gsgs.network/app/uploads/2025/06/University-of-Livingstonia250.png"
+        alt="UNILIA E-Commerce"
+      />
 
       <span>
         UNILIA <b>E-Commerce</b>
@@ -1764,6 +1766,8 @@ function Bookings() {
 // SELLER DASHBOARD
 // ========================================
 
+
+
 function Dashboard() {
   const {
     auth
@@ -1781,7 +1785,28 @@ function Dashboard() {
   const [error, setError] =
     useState('');
 
-  useEffect(() => {
+  const [editing, setEditing] =
+    useState(null);
+
+  const [editForm, setEditForm] =
+    useState({
+      name: '',
+      price: '',
+      description: '',
+      location: '',
+      order_cost: ''
+    });
+
+  const [editImage, setEditImage] =
+    useState(null);
+
+  const [saving, setSaving] =
+    useState(false);
+
+  const [editError, setEditError] =
+    useState('');
+
+  const loadListings = () => {
     if (!auth?.token) {
       return;
     }
@@ -1804,7 +1829,119 @@ function Dashboard() {
       .finally(() => {
         setLoading(false);
       });
+  };
+
+  useEffect(() => {
+    loadListings();
   }, [auth?.token]);
+
+  const startEditing = item => {
+    setEditing(item);
+
+    setEditForm({
+      name: item.name || '',
+      price: item.price || '',
+      description:
+        item.description || '',
+      location:
+        item.location || '',
+      order_cost:
+        item.order_cost ?? ''
+    });
+
+    setEditImage(null);
+    setEditError('');
+  };
+
+  const cancelEditing = () => {
+    setEditing(null);
+
+    setEditForm({
+      name: '',
+      price: '',
+      description: '',
+      location: '',
+      order_cost: ''
+    });
+
+    setEditImage(null);
+    setEditError('');
+  };
+
+  const saveEdit = async e => {
+    e.preventDefault();
+
+    if (!editing) {
+      return;
+    }
+
+    setSaving(true);
+    setEditError('');
+
+    try {
+      const formData =
+        new FormData();
+
+      formData.append(
+        'name',
+        editForm.name
+      );
+
+      formData.append(
+        'price',
+        editForm.price
+      );
+
+      formData.append(
+        'description',
+        editForm.description
+      );
+
+      formData.append(
+        'location',
+        editForm.location
+      );
+
+      formData.append(
+        'order_cost',
+        editForm.order_cost
+      );
+
+      if (editImage) {
+        formData.append(
+          'image',
+          editImage
+        );
+      }
+
+      const data =
+        await api(
+          `/api/listings/${editing.id}`,
+          {
+            method: 'PATCH',
+            body: formData
+          }
+        );
+
+      setListings(
+        previous =>
+          previous.map(item =>
+            item.id === editing.id
+              ? data.listing
+              : item
+          )
+      );
+
+      cancelEditing();
+
+    } catch (e) {
+      setEditError(
+        e.message
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <section>
@@ -1837,6 +1974,157 @@ function Dashboard() {
       <Notice
         error={error}
       />
+
+      {editing && (
+        <div className="edit-product-panel">
+          <h2>
+            Edit Product
+          </h2>
+
+          <Notice
+            error={editError}
+          />
+
+          <form
+            onSubmit={saveEdit}
+          >
+            <div className="form-grid">
+              <label>
+                Product Name
+
+                <input
+                  type="text"
+                  value={
+                    editForm.name
+                  }
+                  onChange={e =>
+                    setEditForm({
+                      ...editForm,
+                      name:
+                        e.target.value
+                    })
+                  }
+                  required
+                />
+              </label>
+
+              <label>
+                Price
+
+                <input
+                  type="number"
+                  value={
+                    editForm.price
+                  }
+                  onChange={e =>
+                    setEditForm({
+                      ...editForm,
+                      price:
+                        e.target.value
+                    })
+                  }
+                  min="1"
+                  required
+                />
+              </label>
+
+              <label>
+                Location
+
+                <input
+                  type="text"
+                  value={
+                    editForm.location
+                  }
+                  onChange={e =>
+                    setEditForm({
+                      ...editForm,
+                      location:
+                        e.target.value
+                    })
+                  }
+                  required
+                />
+              </label>
+
+              <label>
+                Order Cost
+
+                <input
+                  type="number"
+                  value={
+                    editForm.order_cost
+                  }
+                  onChange={e =>
+                    setEditForm({
+                      ...editForm,
+                      order_cost:
+                        e.target.value
+                    })
+                  }
+                  min="0"
+                />
+              </label>
+            </div>
+
+            <label>
+              Description
+
+              <textarea
+                rows="5"
+                value={
+                  editForm.description
+                }
+                onChange={e =>
+                  setEditForm({
+                    ...editForm,
+                    description:
+                      e.target.value
+                  })
+                }
+                required
+              />
+            </label>
+
+            <label>
+              Replace Image
+              <input
+                type="file"
+                accept="image/*"
+                onChange={e =>
+                  setEditImage(
+                    e.target.files?.[0] ||
+                    null
+                  )
+                }
+              />
+            </label>
+
+            <div className="dashboard-product-actions">
+              <button
+                type="button"
+                className="secondary"
+                onClick={
+                  cancelEditing
+                }
+                disabled={saving}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                className="primary"
+                disabled={saving}
+              >
+                {saving
+                  ? 'Saving...'
+                  : 'Save Changes'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {loading && (
         <p className="muted">
@@ -1938,9 +2226,7 @@ function Dashboard() {
                   <button
                     className="secondary"
                     onClick={() =>
-                      alert(
-                        'Edit feature coming next.'
-                      )
+                      startEditing(item)
                     }
                   >
                     Edit
