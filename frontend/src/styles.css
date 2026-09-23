@@ -1919,3 +1919,327 @@ section {
     height: 36px;
   }
 }
+
+/* ========================================
+   LIKE BUTTON
+======================================== */
+
+.like-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  padding: 9px 14px;
+  border-radius: 10px;
+
+  border: 1px solid #dbe2ea;
+  background: #ffffff;
+  color: #0b1f3a;
+
+  font-size: 14px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.15s ease;
+}
+
+.like-button:hover {
+  background: #eef3f8;
+  border-color: #0b1f3a;
+  transform: translateY(-1px);
+}
+
+.like-button.liked {
+  background: #0b1f3a;
+  border-color: #0b1f3a;
+  color: #ffffff;
+}
+
+.like-button.liked:hover {
+  background: #12345b;
+  border-color: #12345b;
+}
+
+.like-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* PRODUCT CARD ACTIONS */
+
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.card-actions .like-button {
+  flex: 0 0 auto;
+}
+
+.card-actions .secondary {
+  flex: 1;
+  text-align: center;
+}
+
+/* MOBILE */
+
+@media (max-width: 600px) {
+  .card-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .card-actions .like-button,
+  .card-actions .secondary {
+    width: 100%;
+  }
+}
+
+
+
+/* ========================================
+   DELETE PRODUCT BUTTON
+======================================== */
+
+.delete-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 40px;
+  padding: 9px 15px;
+
+  border: 1px solid #f0b8b2;
+  border-radius: 10px;
+
+  background: #ffffff;
+  color: #b42318;
+
+  font-size: 14px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.15s ease;
+}
+
+.delete-button:hover {
+  background: #fff1f0;
+  border-color: #b42318;
+  color: #8f1d16;
+  transform: translateY(-1px);
+}
+
+.delete-button:active {
+  transform: translateY(0);
+}
+
+.dashboard-product-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 600px) {
+  .dashboard-product-actions {
+    width: 100%;
+  }
+
+  .dashboard-product-actions button {
+    flex: 1;
+    min-width: 90px;
+  }
+}
+
+
+/* ========================================
+   DELETE CONFIRMATION MODAL
+======================================== */
+
+.delete-modal-overlay {
+  position: fixed;
+  inset: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  background: rgba(5, 18, 35, 0.62);
+
+  z-index: 9999;
+
+  backdrop-filter: blur(4px);
+}
+
+.delete-modal {
+  width: 100%;
+  max-width: 430px;
+
+  background: #ffffff;
+
+  border-radius: 20px;
+
+  padding: 30px;
+
+  text-align: center;
+
+  box-shadow:
+    0 24px 70px
+    rgba(0, 0, 0, 0.25);
+
+  animation:
+    deleteModalIn
+    0.2s ease-out;
+}
+
+.delete-modal-icon {
+  width: 58px;
+  height: 58px;
+
+  margin: 0 auto 18px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background: #fff1f0;
+
+  font-size: 25px;
+}
+
+.delete-modal h2 {
+  margin: 0 0 8px;
+
+  color: #0b1f3a;
+
+  font-size: 24px;
+}
+
+.delete-modal-product {
+  margin: 0 0 10px;
+
+  color: #0b1f3a;
+
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.delete-modal-message {
+  margin: 0 auto 20px;
+
+  max-width: 350px;
+
+  color: #64748b;
+
+  line-height: 1.6;
+}
+
+.delete-modal-error {
+  margin-bottom: 18px;
+
+  padding: 11px 14px;
+
+  border-radius: 10px;
+
+  background: #fff1f0;
+
+  color: #b42318;
+
+  font-size: 14px;
+}
+
+.delete-modal-actions {
+  display: flex;
+
+  gap: 12px;
+
+  margin-top: 24px;
+}
+
+.delete-modal-actions button {
+  flex: 1;
+
+  min-height: 44px;
+}
+
+.delete-confirm-button {
+  border: 1px solid #b42318;
+
+  border-radius: 10px;
+
+  background: #b42318;
+
+  color: #ffffff;
+
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    transform 0.15s ease;
+}
+
+.delete-confirm-button:hover {
+  background: #8f1d16;
+
+  transform:
+    translateY(-1px);
+}
+
+.delete-confirm-button:disabled {
+  opacity: 0.65;
+
+  cursor: not-allowed;
+
+  transform: none;
+}
+
+@keyframes deleteModalIn {
+  from {
+    opacity: 0;
+    transform:
+      translateY(10px)
+      scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform:
+      translateY(0)
+      scale(1);
+  }
+}
+
+@media (max-width: 500px) {
+  .delete-modal {
+    padding: 24px;
+    border-radius: 16px;
+  }
+
+  .delete-modal-actions {
+    flex-direction: column;
+  }
+
+  .delete-modal-actions button {
+    width: 100%;
+  }
+}

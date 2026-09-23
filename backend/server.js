@@ -118,6 +118,74 @@ function uploadImageToCloudinary(file) {
     }
   );
 }
+
+function getCloudinaryPublicId(
+  imageUrl
+) {
+  if (
+    !imageUrl ||
+    !imageUrl.includes(
+      'res.cloudinary.com'
+    )
+  ) {
+    return null;
+  }
+
+  try {
+    const url =
+      new URL(imageUrl);
+
+    const parts =
+      url.pathname
+        .split('/')
+        .filter(Boolean);
+
+    const uploadIndex =
+      parts.indexOf('upload');
+
+    if (
+      uploadIndex === -1
+    ) {
+      return null;
+    }
+
+    let publicParts =
+      parts.slice(
+        uploadIndex + 1
+      );
+
+    // Remove version, e.g. v1790192930
+    if (
+      publicParts[0] &&
+      /^v\d+$/.test(
+        publicParts[0]
+      )
+    ) {
+      publicParts.shift();
+    }
+
+    if (!publicParts.length) {
+      return null;
+    }
+
+    const filename =
+      publicParts.pop();
+
+    const filenameWithoutExtension =
+      filename.replace(
+        /\.[^/.]+$/,
+        ''
+      );
+
+    return [
+      ...publicParts,
+      filenameWithoutExtension
+    ].join('/');
+
+  } catch {
+    return null;
+  }
+}
 // ===============================
 // MIDDLEWARE
 // ===============================
@@ -435,6 +503,10 @@ app.post(
 // GET ALL LISTINGS
 // ===============================
 
+// ===============================
+// GET ALL LISTINGS
+// ===============================
+
 app.get(
   '/api/listings',
   async (req, res) => {
@@ -449,7 +521,12 @@ app.get(
       let sql = `
         SELECT
           l.*,
-          u.name AS seller_name
+          u.name AS seller_name,
+          (
+            SELECT COUNT(*)
+            FROM listing_likes
+            WHERE listing_id = l.id
+          ) AS like_count
         FROM listings l
         JOIN users u
           ON u.id = l.seller_id
@@ -502,7 +579,6 @@ app.get(
     }
   }
 );
-
 // ===============================
 // GET SINGLE LISTING
 // ===============================
@@ -554,6 +630,7 @@ app.get(
   }
 );
 
+
 // ===============================
 // MY LISTINGS — SELLER DASHBOARD
 // ===============================
@@ -569,7 +646,12 @@ app.get(
         await pool.execute(
           `SELECT
             l.*,
-            u.name AS seller_name
+            u.name AS seller_name,
+            (
+              SELECT COUNT(*)
+              FROM listing_likes
+              WHERE listing_id = l.id
+            ) AS like_count
            FROM listings l
            JOIN users u
              ON u.id = l.seller_id
@@ -595,7 +677,6 @@ app.get(
     }
   }
 );
-
 // ===============================
 // CREATE LISTING
 // ===============================
@@ -932,6 +1013,159 @@ if (req.file) {
   }
 );
 
+
+// ===============================
+// LIKE / UNLIKE LISTING
+// ===============================
+
+app.post(
+  '/api/listings/:id/like',
+  auth,
+  async (req, res) => {
+    try {
+      const listingId =
+        Number(req.params.id);
+
+      if (!Number.isInteger(listingId)) {
+        return fail(
+          res,
+          400,
+          'Invalid product ID.'
+        );
+      }
+
+      const [
+        listings
+      ] = await pool.execute(
+        `SELECT id
+         FROM listings
+         WHERE id = ?`,
+        [listingId]
+      );
+
+      if (!listings.length) {
+        return fail(
+          res,
+          404,
+          'Good not found.'
+        );
+      }
+
+      const [
+        existing
+      ] = await pool.execute(
+        `SELECT id
+         FROM listing_likes
+         WHERE listing_id = ?
+           AND user_id = ?`,
+        [
+          listingId,
+          req.user.id
+        ]
+      );
+
+      let liked;
+
+      if (existing.length) {
+        await pool.execute(
+          `DELETE FROM listing_likes
+           WHERE listing_id = ?
+             AND user_id = ?`,
+          [
+            listingId,
+            req.user.id
+          ]
+        );
+
+        liked = false;
+      } else {
+        await pool.execute(
+          `INSERT INTO listing_likes
+           (
+             listing_id,
+             user_id
+           )
+           VALUES (?, ?)`,
+          [
+            listingId,
+            req.user.id
+          ]
+        );
+
+        liked = true;
+      }
+
+      const [
+        countRows
+      ] = await pool.execute(
+        `SELECT COUNT(*) AS like_count
+         FROM listing_likes
+         WHERE listing_id = ?`,
+        [listingId]
+      );
+
+      ok(res, {
+        liked,
+        like_count:
+          Number(
+            countRows[0]
+              .like_count
+          )
+      });
+
+    } catch (e) {
+      console.error(e);
+
+      fail(
+        res,
+        500,
+        'Could not update like.'
+      );
+    }
+  }
+);
+
+
+// ===============================
+// GET MY LIKES
+// ===============================
+
+app.get(
+  '/api/my-likes',
+  auth,
+  async (req, res) => {
+    try {
+      const [
+        rows
+      ] = await pool.execute(
+        `SELECT listing_id
+         FROM listing_likes
+         WHERE user_id = ?`,
+        [
+          req.user.id
+        ]
+      );
+
+      ok(res, {
+        likes: rows.map(
+          row => Number(
+            row.listing_id
+          )
+        )
+      });
+
+    } catch (e) {
+      console.error(e);
+
+      fail(
+        res,
+        500,
+        'Could not load your likes.'
+      );
+    }
+  }
+);
+
 // ===============================
 // BOOK LISTING
 // ===============================
@@ -1073,6 +1307,166 @@ app.post(
 
     } finally {
       conn.release();
+    }
+  }
+);
+
+
+// ===============================
+// DELETE LISTING — SELLER
+// ===============================
+
+app.delete(
+  '/api/listings/:id',
+  auth,
+  async (req, res) => {
+    try {
+      const listingId =
+        Number(req.params.id);
+
+      if (!Number.isInteger(listingId)) {
+        return fail(
+          res,
+          400,
+          'Invalid product ID.'
+        );
+      }
+
+      // Find the product
+      const [
+        listings
+      ] = await pool.execute(
+        `SELECT
+          id,
+          seller_id,
+          name,
+          image_url
+         FROM listings
+         WHERE id = ?`,
+        [listingId]
+      );
+
+      if (!listings.length) {
+        return fail(
+          res,
+          404,
+          'Good not found.'
+        );
+      }
+
+      const listing =
+        listings[0];
+
+      // Only the owner can delete it
+      if (
+        Number(listing.seller_id) !==
+        Number(req.user.id)
+      ) {
+        return fail(
+          res,
+          403,
+          'You can only delete your own goods.'
+        );
+      }
+
+      // Do not delete products that already have bookings
+      const [
+        bookings
+      ] = await pool.execute(
+        `SELECT COUNT(*) AS booking_count
+         FROM bookings
+         WHERE listing_id = ?`,
+        [listingId]
+      );
+
+      const bookingCount =
+        Number(
+          bookings[0].booking_count
+        );
+
+      if (bookingCount > 0) {
+        return fail(
+          res,
+          409,
+          'This good cannot be deleted because it has booking records.'
+        );
+      }
+
+      // Remove likes first
+      await pool.execute(
+        `DELETE FROM listing_likes
+         WHERE listing_id = ?`,
+        [listingId]
+      );
+
+      // Remove the product
+      const [
+        result
+      ] = await pool.execute(
+        `DELETE FROM listings
+         WHERE id = ?
+           AND seller_id = ?`,
+        [
+          listingId,
+          req.user.id
+        ]
+      );
+
+      if (!result.affectedRows) {
+        return fail(
+          res,
+          404,
+          'Good not found or you are not its owner.'
+        );
+      }
+
+      // Remove the image from Cloudinary
+      const publicId =
+        getCloudinaryPublicId(
+          listing.image_url
+        );
+
+      if (publicId) {
+        try {
+          await cloudinary.uploader.destroy(
+            publicId,
+            {
+              resource_type:
+                'image',
+              type:
+                'upload',
+              invalidate:
+                true
+            }
+          );
+        } catch (imageError) {
+          console.error(
+            'Cloudinary image deletion failed:',
+            imageError
+          );
+        }
+      }
+
+      broadcast({
+        type:
+          'LISTING_DELETED',
+
+        listingId
+      });
+
+      ok(res, {
+        message:
+          'Good deleted successfully.'
+      });
+
+    } catch (e) {
+      console.error(e);
+
+      fail(
+        res,
+        500,
+        'Could not delete the good.'
+      );
     }
   }
 );

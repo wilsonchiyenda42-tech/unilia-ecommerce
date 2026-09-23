@@ -322,17 +322,28 @@ function Notice({
 // ========================================
 
 function Marketplace() {
+  const {
+    auth
+  } = useAuth();
+
   const [items, setItems] =
     useState([]);
 
   const [q, setQ] =
     useState('');
 
+  const [likedIds, setLikedIds] =
+    useState([]);
+
   const [loading, setLoading] =
     useState(true);
 
   const [error, setError] =
     useState('');
+
+  // ========================================
+  // LOAD PRODUCTS
+  // ========================================
 
   const load = async () => {
     setLoading(true);
@@ -346,67 +357,143 @@ function Marketplace() {
         );
 
       setItems(
-        data.listings
+        data.listings || []
       );
 
       setError('');
+
     } catch (e) {
       setError(
         e.message
       );
+
     } finally {
       setLoading(false);
     }
   };
 
+  // ========================================
+  // LOAD MY LIKES — ONCE
+  // ========================================
+
+  const loadMyLikes =
+    async () => {
+      if (!auth?.token) {
+        setLikedIds([]);
+        return;
+      }
+
+      try {
+        const data =
+          await api(
+            '/api/my-likes'
+          );
+
+        setLikedIds(
+          data.likes || []
+        );
+
+      } catch (e) {
+        setLikedIds([]);
+      }
+    };
+
+  // ========================================
+  // INITIAL LOAD
+  // ========================================
+
   useEffect(() => {
     load();
   }, []);
+
+  // ========================================
+  // LOAD LIKES WHEN USER LOGS IN/OUT
+  // ========================================
+
+  useEffect(() => {
+    loadMyLikes();
+  }, [
+    auth?.token
+  ]);
+
+  // ========================================
+  // WEBSOCKET
+  // ========================================
 
   useEffect(() => {
     const ws =
       new WebSocket(WS);
 
     ws.onmessage = e => {
-      const d =
-        JSON.parse(e.data);
+      try {
+        const d =
+          JSON.parse(
+            e.data
+          );
 
-      if (
-        d.type ===
-        'LISTING_CREATED'
-      ) {
-        setItems(old => [
-          d.listing,
-          ...old
-        ]);
-      }
+        if (
+          d.type ===
+          'LISTING_CREATED'
+        ) {
+          setItems(old => [
+            d.listing,
+            ...old
+          ]);
+        }
 
-      if (
-        d.type ===
-        'LISTING_STATUS'
-      ) {
-        setItems(old =>
-          old.map(x =>
-            x.id ===
-            d.listingId
-              ? {
-                  ...x,
-                  status:
-                    d.status
-                }
-              : x
-          )
+        if (
+          d.type ===
+          'LISTING_STATUS'
+        ) {
+          setItems(old =>
+            old.map(x =>
+              x.id ===
+              d.listingId
+                ? {
+                    ...x,
+                    status:
+                      d.status
+                  }
+                : x
+            )
+          );
+        }
+
+        if (
+          d.type ===
+          'LISTING_UPDATED'
+        ) {
+          setItems(old =>
+            old.map(x =>
+              x.id ===
+              d.listing?.id
+                ? {
+                    ...x,
+                    ...d.listing
+                  }
+                : x
+            )
+          );
+        }
+
+      } catch (e) {
+        console.error(
+          'WebSocket message error:',
+          e
         );
       }
     };
 
     return () =>
       ws.close();
+
   }, []);
 
   return (
     <section>
+
       <div className="hero">
+
         <div>
           <p className="eyebrow">
             UNILIA STUDENT
@@ -432,17 +519,22 @@ function Marketplace() {
         >
           + Post a good
         </Link>
+
       </div>
 
       <div className="searchbar">
+
         <input
           value={q}
           onChange={e =>
-            setQ(e.target.value)
+            setQ(
+              e.target.value
+            )
           }
           onKeyDown={e => {
             if (
-              e.key === 'Enter'
+              e.key ===
+              'Enter'
             ) {
               load();
             }
@@ -455,6 +547,7 @@ function Marketplace() {
         >
           Search
         </button>
+
       </div>
 
       <Notice
@@ -462,105 +555,188 @@ function Marketplace() {
       />
 
       {loading ? (
+
         <p className="muted">
           Loading marketplace...
         </p>
+
       ) : (
+
         <div className="grid">
+
           {items.map(item => (
+
             <ProductCard
               key={item.id}
               item={item}
+              likedIds={
+                likedIds
+              }
             />
+
           ))}
 
           {!items.length && (
+
             <div className="empty">
               No goods found.
               Try another search.
             </div>
+
           )}
+
         </div>
+
       )}
+
     </section>
   );
 }
-
 // ========================================
 // PRODUCT CARD
 // ========================================
 
 function ProductCard({
-  item
+  item,
+  likedIds = []
 }) {
+  const {
+    auth
+  } = useAuth();
+
+  const [liked, setLiked] =
+    useState(false);
+
+  const [likeCount, setLikeCount] =
+    useState(
+      Number(
+        item.like_count || 0
+      )
+    );
+
+  const [liking, setLiking] =
+    useState(false);
+
+  // Check whether this user already liked this product
+  useEffect(() => {
+  setLiked(
+    likedIds.includes(
+      Number(item.id)
+    )
+  );
+}, [
+  likedIds,
+  item.id
+]);
+
+  const handleLike = async () => {
+    if (!auth?.token) {
+      alert(
+        'Please log in to like this product.'
+      );
+
+      return;
+    }
+
+    if (liking) {
+      return;
+    }
+
+    setLiking(true);
+
+    try {
+      const data =
+        await api(
+          `/api/listings/${item.id}/like`,
+          {
+            method: 'POST'
+          }
+        );
+
+      setLiked(
+        data.liked
+      );
+
+      setLikeCount(
+        Number(
+          data.like_count
+        )
+      );
+
+    } catch (e) {
+      alert(
+        e.message
+      );
+    } finally {
+      setLiking(false);
+    }
+  };
+
   return (
     <article className="card">
+
       <div className="image-wrap">
         <img
-          src={getImageUrl(item.image_url)}
-        alt={item.name}
+          src={getImageUrl(
+            item.image_url
+          )}
+          alt={item.name}
         />
 
         <span
           className={`badge ${item.status}`}
         >
-          {item.status ===
-          'available'
-            ? 'Available'
-            : item.status ===
-              'reserved'
-            ? 'Booked'
-            : 'Sold'}
+          {item.status}
         </span>
       </div>
 
-      <div className="card-body">
-        <p className="category">
-          {item.location}
-        </p>
+      <div className="card-content">
 
         <h3>
           {item.name}
         </h3>
 
-        <p className="desc">
-          {item.description}
-        </p>
-
-        <div className="price">
+        <p className="price">
           MK{' '}
           {Number(
             item.price
           ).toLocaleString()}
-        </div>
+        </p>
 
-        {item.order_cost != null && (
-          <small>
-            Order cost: MK{' '}
-            {Number(
-              item.order_cost
-            ).toLocaleString()}
-          </small>
-        )}
+        <p>
+          {item.location}
+        </p>
 
-        <div className="card-foot">
-          <span>
-            Seller:{' '}
-            {item.seller_name}
-          </span>
+        <div className="card-actions">
+
+          <button
+            className={`like-button ${
+              liked ? 'liked' : ''
+            }`}
+            onClick={handleLike}
+            disabled={liking}
+          >
+            {liked
+              ? '❤️'
+              : '♡'}
+            {' '}
+            {likeCount}
+          </button>
 
           <Link
+            className="secondary"
             to={`/product/${item.id}`}
           >
-            View →
+            View
           </Link>
+
         </div>
+
       </div>
+
     </article>
   );
 }
-
-// ========================================
 // AUTH FORM
 // ========================================
 
@@ -1785,6 +1961,7 @@ function Bookings() {
 
 
 function Dashboard() {
+
   const {
     auth
   } = useAuth();
@@ -1822,11 +1999,21 @@ function Dashboard() {
   const [editError, setEditError] =
     useState('');
 
+  // DELETE PRODUCT MODAL
+  const [deleting, setDeleting] =
+    useState(null);
+
+  const [deleteLoading, setDeleteLoading] =
+    useState(false);
+
+  const [deleteError, setDeleteError] =
+    useState('');
+
   const loadListings = () => {
+
     if (!auth?.token) {
       return;
     }
-
     setLoading(true);
 
     api('/api/my-listings')
@@ -1958,6 +2145,47 @@ function Dashboard() {
       setSaving(false);
     }
   };
+  
+const deleteListing = item => {
+  setDeleting(item);
+  setDeleteError('');
+};
+
+const confirmDeleteListing = async () => {
+  if (!deleting) {
+    return;
+  }
+
+  setDeleteLoading(true);
+  setDeleteError('');
+
+  try {
+    await api(
+      `/api/listings/${deleting.id}`,
+      {
+        method: 'DELETE'
+      }
+    );
+
+    setListings(
+      previous =>
+        previous.filter(
+          product =>
+            product.id !== deleting.id
+        )
+    );
+
+    setDeleting(null);
+
+  } catch (e) {
+    setDeleteError(
+      e.message
+    );
+
+  } finally {
+    setDeleteLoading(false);
+  }
+};
 
   return (
     <section>
@@ -2211,6 +2439,18 @@ function Dashboard() {
                       'Not specified'}
                   </p>
 
+                  <p className="product-likes">
+                    ❤️{' '}
+                    {Number(
+                      item.like_count || 0
+                    )}{' '}
+                    {Number(
+                      item.like_count || 0
+                    ) === 1
+                      ? 'Like'
+                      : 'Likes'}
+                  </p>
+
                   <p>
                     Posted:{' '}
                     {item.created_at
@@ -2228,30 +2468,113 @@ function Dashboard() {
                 </div>
 
                 <div className="dashboard-product-actions">
-                  <button
-                    className="secondary"
-                    onClick={() =>
-                      nav(
-                        `/product/${item.id}`
-                      )
-                    }
-                  >
-                    View
-                  </button>
 
-                  <button
-                    className="secondary"
-                    onClick={() =>
-                      startEditing(item)
-                    }
-                  >
-                    Edit
-                  </button>
-                </div>
+  <button
+    className="secondary"
+    onClick={() =>
+      nav(
+        `/product/${item.id}`
+      )
+    }
+  >
+    View
+  </button>
+
+  <button
+    className="secondary"
+    onClick={() =>
+      startEditing(item)
+    }
+  >
+    Edit
+  </button>
+
+  <button
+    className="delete-button"
+    onClick={() =>
+      deleteListing(item)
+    }
+  >
+    Delete
+  </button>
+
+</div>
               </div>
             ))}
           </div>
         )}
+
+        {deleting && (
+  <div
+    className="delete-modal-overlay"
+    onClick={() => {
+      if (!deleteLoading) {
+        setDeleting(null);
+        setDeleteError('');
+      }
+    }}
+  >
+    <div
+      className="delete-modal"
+      onClick={e =>
+        e.stopPropagation()
+      }
+    >
+      <div className="delete-modal-icon">
+        🗑️
+      </div>
+
+      <h2>
+        Delete Product?
+      </h2>
+
+      <p className="delete-modal-product">
+        {deleting.name}
+      </p>
+
+      <p className="delete-modal-message">
+        This product will be removed
+        from your marketplace.
+        This action cannot be undone.
+      </p>
+
+      {deleteError && (
+        <div className="delete-modal-error">
+          {deleteError}
+        </div>
+      )}
+
+      <div className="delete-modal-actions">
+
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => {
+            setDeleting(null);
+            setDeleteError('');
+          }}
+          disabled={deleteLoading}
+        >
+          Cancel
+        </button>
+
+        <button
+          type="button"
+          className="delete-confirm-button"
+          onClick={
+            confirmDeleteListing
+          }
+          disabled={deleteLoading}
+        >
+          {deleteLoading
+            ? 'Deleting...'
+            : 'Delete Product'}
+        </button>
+
+      </div>
+    </div>
+  </div>
+)}
     </section>
   );
 }
